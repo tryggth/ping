@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: gcr.io/hightowerlabs/frontend:v1
+          image: tryggth/frontend:v1
           imagePullPolicy: Always
           env:
             - name: REGION

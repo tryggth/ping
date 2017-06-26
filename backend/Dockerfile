@@ -1,4 +1,4 @@
 FROM scratch
-MAINTAINER Kelsey Hightower <kelsey.hightower@gmail.com>
+MAINTAINER Jim Walters <tryggth@gmail.com>
 ADD backend /backend
 ENTRYPOINT ["/backend"]

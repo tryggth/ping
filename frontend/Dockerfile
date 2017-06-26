@@ -1,4 +1,4 @@
 FROM scratch
-MAINTAINER Kelsey Hightower <kelsey.hightower@gmail.com>
+MAINTAINER Jim Walters <tryggthr@gmail.com>
 ADD frontend /frontend
 ENTRYPOINT ["/frontend"]

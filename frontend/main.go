@@ -23,7 +23,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/kelseyhightower/ping"
+	"github.com/tryggth/ping"
 
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 

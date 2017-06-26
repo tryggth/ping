@@ -16,7 +16,7 @@ package main
 import (
 	"log"
 
-	"github.com/kelseyhightower/ping"
+	"github.com/tryggth/ping"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
