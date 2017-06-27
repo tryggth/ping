@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	version = "v2"
+	version = "v1"
 )
 
 var (

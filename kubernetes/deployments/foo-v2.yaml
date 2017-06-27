@@ -15,10 +15,7 @@ spec:
           imagePullPolicy: Always
           env:
             - name: REGION
-              valueFrom:
-                configMapKeyRef:
-                  name: cluster
-                  key: region
+              value: "SPACE"
           args:
             - "-grpc=0.0.0.0:8080"
             - "-health=0.0.0.0:8008"

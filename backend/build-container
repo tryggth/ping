@@ -1,5 +1,5 @@
 #!/bin/bash
 ./build
-docker build -t tryggth/backend:v2 .
-gcloud docker -- push tryggth/backend:v2
+docker build -t tryggth/backend:v1 .
+gcloud docker -- push tryggth/backend:v1
 rm backend
