@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	version = "v55555"
+	version = "v6"
 )
 
 var (
