@@ -1,5 +1,0 @@
-#!/bin/bash
-./build
-docker build -t tryggth/frontend:v1 .
-gcloud docker -- push tryggth/frontend:v1
-rm frontend
