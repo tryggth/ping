@@ -8,7 +8,6 @@ service Ping {
 
 message Request {}
 
-
 message Response {
   string message = 1;
 }
