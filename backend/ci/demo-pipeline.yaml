@@ -1,0 +1,200 @@
+################################################################################
+# REFERENCES
+# ConcourseCI Docs: https://concourse.ci
+# Concourse tutorial: https://github.com/starkandwayne/concourse-tutorial
+#
+# NOTES
+# This file is a self-contained description of a Concourse CI pipeline
+# to deploy a http://gosparta.io application.  There's a couple of things to
+# note:
+#   - The YAML uses node references so that scripts can be defined in the
+#     CONSTANTS key and referenced in the jobs section
+#   - This requires an additional YML file that defines AWS credentials and the
+#     S3 bucket that should be used for storage. Required keys:
+#       s3-bucket: XXXXXX
+#       s3-access-key-id: XXXXXXXXXXXXXXXXXX
+#       s3-secret-access-key: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+#
+resource_types:
+  - name: gcs-resource
+    type: docker-image
+    source:
+      repository: frodenas/gcs-resource
+
+################################################################################
+# RESOURCES
+################################################################################
+resources:
+- name: source-bar-service
+  type: git
+  source:
+    uri: https://github.com/tryggth/ping
+    paths: [backend]
+
+- name: source-bar-service-docker
+  type: git
+  source:
+    uri: https://github.com/tryggth/ping
+    paths: [backend/docker]
+
+- name: app-version
+  type: semver
+  source:
+    branch: version
+    driver: git
+    file: app-version
+    initial_version: 0.0.1
+    password: {{git-password}}
+    uri: https://github.com/tryggth/ping.git
+    username: tryggth
+
+- name: container-version
+  type: semver
+  source:
+    branch: version
+    driver: git
+    file: docker-version
+    initial_version: 0.0.1
+    password: {{git-password}}
+    uri: https://github.com/tryggth/ping.git
+    username: tryggth
+
+- name: BinaryApplicationArchive
+  type: gcs-resource
+  source:
+      bucket: concourse-demo
+      json_key: {{gcs-storage}}
+      regexp: backend-(.*)
+
+- name: docker-image-bar-service
+  type: docker-image
+  source:
+    email: tryggth2009@gmail.com
+    password: {{git-password}}
+    repository: tryggth/backend
+    username: tryggth
+
+################################################################################
+# JOBS
+################################################################################
+jobs:
+  - name: BuildApp
+    plan:
+    - get: source-bar-service
+      trigger: true
+    - get: app-version
+      params:
+        bump: patch
+    - task: unit-test
+      config:
+        << : *CONFIG
+        inputs:
+          - name: source-bar-service
+        run:
+          path: sh
+          args:
+          - -exc
+          - *UNIT_TEST_SCRIPT
+    - task: build
+      config:
+        << : *CONFIG
+        inputs:
+          - name: app-version
+          - name: source-bar-service
+        run:
+          path: bash
+          args:
+          - -exc
+          - *BUILD_SCRIPT
+        outputs:
+        - name: build
+    - put: BinaryApplicationArchive
+      params:
+        file: build/backend-*
+    - put: app-version
+      params:
+        file: app-version/number
+  - name: BuildContainer
+    plan:
+    - get: container-version
+      params:
+        bump: patch
+    - get: BinaryApplicationArchive
+      passed: [BuildApp]
+      trigger: true
+    - get: source-bar-service-docker
+      trigger: true
+    - task: build-container
+      config:
+        << : *CONFIG
+        inputs:
+          - name: source-bar-service-docker
+          - name: BinaryApplicationArchive
+        run:
+          path: sh
+          args:
+          - -exc
+          - *DOCKER_SETUP_SCRIPT
+        outputs:
+          - name: dockerbuild
+    - put: docker-image-bar-service
+      params:
+        build: dockerbuild
+        tag: container-version/number
+    - put: container-version
+      params:
+        file: container-version/number
+
+################################################################################
+# CONSTANTS
+################################################################################
+CONSTANTS:
+  - CONFIG: &CONFIG
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: golang
+          tag: '1.8'
+
+  - UNIT_TEST_SCRIPT: &UNIT_TEST_SCRIPT |
+      mkdir -p $GOPATH/src/github.com/tryggth/ping
+      cp -var source-bar-service/* $GOPATH/src/github.com/tryggth/ping
+      cd $GOPATH/src/github.com/tryggth/ping/backend
+
+      go get -d -v ./...
+      go test -v .
+
+  - BUILD_SCRIPT: &BUILD_SCRIPT |
+      cd app-version
+        SEM_NUMBER=`cat number`
+        SEM_VERSION=`cat version`
+        echo "SEM_NUMBER=$SEM_NUMBER, SEM_VERSION=$SEM_VERSION"
+      cd ..
+
+      mkdir -p $GOPATH/src/github.com/tryggth/ping
+      cp -var source-bar-service/* $GOPATH/src/github.com/tryggth/ping
+
+      pushd $GOPATH/src/github.com/tryggth/ping/backend
+      go get -d -v ./...
+      GOOS=linux go build -a -o backend-$SEM_NUMBER --ldflags '-extldflags "-static"' -tags netgo -installsuffix netgo .
+      pwd
+      ls -la
+      popd
+      pwd
+      OUTPUT_FILE="./build/backend-$SEM_NUMBER"
+      cp $GOPATH/src/github.com/tryggth/ping/backend/backend-$SEM_NUMBER ./build
+      pwd
+      ls -la
+      ls -la ./build
+      ls -la /
+
+  - DOCKER_SETUP_SCRIPT: &DOCKER_SETUP_SCRIPT |
+      cd BinaryApplicationArchive
+        SEM_VERSION=`cat version`
+        echo "SEM_VERSION=$SEM_VERSION"
+      cd ..
+      ls -la
+      cp BinaryApplicationArchive/backend-$SEM_VERSION dockerbuild/backend
+      cp -var source-bar-service-docker/backend/docker/* dockerbuild
+      ls -la dockerbuild
