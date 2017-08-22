@@ -1,5 +1,6 @@
 #!/usr/bin/env /bin/bash
 
+
 echo -n -e "\033]0;Main demo window\007"
 
 # create cluster
